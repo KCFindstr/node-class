@@ -1,7 +1,14 @@
-let express = require('express');
-let knex = require('knex');
+const express = require('express');
+const knex = require('knex');
 
-let app = express();
+const app = express();
+const Track = require('./models/track');
+const bodyParser = require('body-parser');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+	extended: true
+}));
 
 app.get('/api/genres', (request, response) => {
 	let connection = knex({
@@ -62,6 +69,38 @@ app.get('/api/artists', (request, response) => {
 			}
 		});
 		response.json(artists);
+	});
+});
+
+app.patch('/tracks/:id', (request, response) => {
+	let id = request.params.id;
+	let {name, unitPrice, milliseconds} = request.body;
+	console.log(request.body);
+	Track.findByPk(id).then((track) => {
+		if (!track) {
+			return Promise.reject();
+		} else {
+			track.name = name;
+			track.unitPrice = unitPrice;
+			track.milliseconds = milliseconds;
+			return track.save();
+		}
+	})
+	.then((result) => {
+		response.status(200).json(result);
+	}, (result) => {
+		if (!result) {
+			response.status(404).send();
+		} else {
+			response.status(422).json({
+				errors: result.errors.map((error) => {
+					return {
+						attribute: error.path,
+						message: error.message
+					};
+				})
+			});
+		}
 	});
 });
 
